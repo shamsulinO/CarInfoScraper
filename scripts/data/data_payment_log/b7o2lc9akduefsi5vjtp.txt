@@ -1,0 +1,10 @@
+USER_NAME: Albert | USER_ID: 695709977 | GETTING_TIME: 2023-01-19 22:42:10.617659
+Operation: 727465318515446108
+	Status     --> success
+	Datetime   --> 2023-01-19 17:41:58
+	Title      --> Пополнение с карты ****9680
+	Pattern id --> None
+	Direction  --> in
+	Amount     --> 1.94
+	Label      --> b7o2lc9akduefsi5vjtp
+	Type       --> deposition
