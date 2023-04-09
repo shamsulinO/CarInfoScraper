@@ -1,36 +1,34 @@
-import asyncio
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.types.message import ContentType
-from aiogram.utils.executor import start_polling
-from aiogram.types import Message, ShippingOption, ShippingQuery, LabeledPrice, PreCheckoutQuery, ReplyKeyboardRemove, \
-    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ChatActions
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Text
-from aiogram.utils.markdown import link
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import ParseMode
-from aiogram.utils import executor
-from aiogram.utils.callback_data import CallbackData
-import chromedriver_binary
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-import os.path
-from datetime import datetime, timedelta
-from time import sleep
-import random
-import emoji
 import re
 import string
 import sqlite3
 import json
+import random
+
+import asyncio
+from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils import executor
+from aiogram.utils.callback_data import CallbackData
+
+import chromedriver_binary
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+from datetime import datetime, timedelta
+from time import sleep
+
+import emoji
 from yoomoney import Quickpay, Client
 import urllib.request
+import configparser
 import requests
 import Gibdd_Parsing
 
-token_p2p: str = '4100117824213986.22D924C721BB64036C6A781037623F6701D115AADA01F4DAE3A82100653080BF8EF8DEADB20C5FAE9AE9F9C9E8D3301F80BBB618C0500F7B16E100BFC3379BB1EF4E0A6F685D1B5D1DADB3E5DA00A09CC2E6485A2E6A03716B4F5EB31F72CF8CF69697C9F7A66EB5B0C5B4F192CFF45EC7DA036EAB8877A34EC7EA58547AABBE'
+settings = configparser.ConfigParser()
+settings.read(r"data\settings.ini", encoding='utf-8-sig')
+
+token_p2p = settings["settings"]["yoo_token"]
 cb = CallbackData('btn', 'action')
 
 show_print = True
@@ -42,7 +40,7 @@ options.add_argument('headless')
 browser = webdriver.Chrome(chrome_options=options)
 
 loop = asyncio.new_event_loop()
-bot = Bot(token="5910905462:AAHwn40Egjl62K9fYI4jOlTQoACuOCDet_A", parse_mode='HTML')
+bot = Bot(token=settings["settings"]["telegram_token"], parse_mode='HTML')
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage, loop=loop)
 
@@ -244,12 +242,12 @@ async def buy_subscribe(user_id):
     letters_and_digits = string.ascii_lowercase + string.digits
     rand_string = ''.join(random.sample(letters_and_digits, 20))
     quickpay = Quickpay(
-        receiver='4100117824213986',
-        quickpay_form='shop',
-        targets='Avito Parser',
-        paymentType='SB',
-        sum=299,
-        label=rand_string
+        receiver = settings["settings"]["card_receiver"],
+        quickpay_form = 'shop',
+        targets = 'Avito Parser',
+        paymentType = 'SB',
+        sum = int(settings["settings"]["subscribe_price"]),
+        label = rand_string
     )
     claim_keyboard = InlineKeyboardMarkup(inline_keyboard=[[]])
     claim_keyboard.add(InlineKeyboardButton(text=emoji.emojize(':credit_card: Перейти к оплате! :credit_card:'),url=quickpay.redirected_url, callback_data='pay_button'))
