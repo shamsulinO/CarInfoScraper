@@ -5,7 +5,7 @@ import json
 import random
 
 import asyncio
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types,  filters
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils import executor
@@ -24,6 +24,7 @@ import urllib.request
 import configparser
 import requests
 import Gibdd_Parsing
+import Bidfax_Parser
 
 settings = configparser.ConfigParser()
 settings.read(r"data\settings.ini", encoding='utf-8-sig')
@@ -81,8 +82,7 @@ async def checking_files():
                             show = "\n\n".join(user[3].split("~")).split("&")
                             name_ad_for_get_vin = user[3].split("~")
                             markup = types.InlineKeyboardMarkup()
-                            button1 = types.InlineKeyboardButton("Ссылка на объявление", url= show[1])
-                            markup.add(button1)
+                            markup.add(types.InlineKeyboardButton("Ссылка на объявление", url= show[1]))
                             index_vin = 0 if "Название" in name_ad_for_get_vin[0] else 1
                             split_link_for_vin = f'{name_ad_for_get_vin[index_vin].replace(" ","/").replace("*Название*:","")}&{show[1].split("_")[-1]}'
                             markup.add(types.InlineKeyboardButton(text="Получить номер и VIN", callback_data=f"ad_id={split_link_for_vin}"))
@@ -125,7 +125,10 @@ async def main(message: types.Message):
         elif message.text.isdigit() and len(message.text) == 5:
             await get_infomation_from_gibdd(message)
         elif len(message.text) == 17:
-            await gibdd_captcha(message)
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton(text=emoji.emojize(":police_car: ГИБДД :police_car:"), callback_data=f"gibdd_captcha={message.text}"))
+            markup.add(types.InlineKeyboardButton(text=emoji.emojize(":automobile: BidFax :automobile:"), callback_data=f"bidfax={message.text}"))
+            await message.answer(f"*Vin успешно принят!*\nТеперь вам нужно выбрать тип проверки.", parse_mode="Markdown", reply_markup=markup)
         else:
             log_print(user[0][0], user[0][1], yellow_mark, f"Unknown text: {message.text}")
             greet_kb.add(stop, information) if user[0][2] == 1 else greet_kb.add(start, information)
@@ -218,7 +221,8 @@ async def get_vin_number_car(message: types.Message):
         vin = re.search(r'"836":"(.+?)"},"', information_car)
         vin = f"`{vin.group(1)}`" if vin else "Не найдено"
         markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton(text=emoji.emojize(":oncoming_automobile: Информация об авто :oncoming_automobile:"),callback_data=f"gibdd_captcha={vin}"))
+        markup.add(types.InlineKeyboardButton(text=emoji.emojize(":police_car: ГИБДД :police_car:"),callback_data=f"gibdd_captcha={vin}"))
+        markup.add(types.InlineKeyboardButton(text=emoji.emojize(":automobile: BidFax :automobile:"),callback_data=f"bidfax={vin}"))
         await bot.delete_message(message.chat.id, msg.message_id)
         await message.answer(f"*Номер*: {number}\n*Vin*: {vin}", parse_mode="Markdown", reply_markup=markup)
     except Exception:
@@ -283,24 +287,23 @@ async def check_payment(call: types.CallbackQuery):
         await call.message.answer(f"*Avito Parser | Товар не выдан!*\n\nОшибка! Оплаты еще нет, если вы уже оплатили то повторите попытку, если всё равно не получилось то напишите нам по ссылке ниже.\n\n*ВАЖНО! Получать товар нужно из того сообщения из которого оплатили!*\n\n[Телеграм для техподдержки](https://t.me/r_shmsln)\nКод оплаты: `{label}`", parse_mode="Markdown",disable_web_page_preview=True)
     await bot.answer_callback_query(call.id)
 
-async def gibdd_captcha(message: types.Message):
-    try:
-        captcha = requests.get('https://check.gibdd.ru/captcha')
-        captcha = json.loads(captcha.text)
-        urllib.request.urlretrieve(f'data:image/png;base64,{captcha["base64jpg"]}', fr'data\data_photo/captcha{message.chat.id}.jpg')
-        sqlite3_query(f"UPDATE user SET captcha = '{captcha['token']}&{message.text}' WHERE id = '{message.chat.id}'")
-        await bot.send_photo(message.chat.id, types.InputFile(fr'data\data_photo/captcha{message.chat.id}.jpg'),caption=f"*Введите текст с картинки*", parse_mode='Markdown')
-    except Exception:
-        await message.answer(emoji.emojize(f":prohibited: *Не удалось получить капчу :(*"), parse_mode="Markdown")
-
 @dp.callback_query_handler(lambda c: c.data.startswith('gibdd_captcha='))
-async def handle_captcha(call: types.CallbackQuery):
+async def gibdd_captcha(call: types.CallbackQuery):
     user = sqlite3_query(f"SELECT id, name, subscribe_date FROM user WHERE id = '{call.message.chat.id}'")
     follow_time = user[0][2].split("-")
     if not (datetime(int(follow_time[0]), int(follow_time[1]),int(follow_time[2])) - datetime.now()).total_seconds() < 0:
-        call.message.text, call.message.chat.id = call.data.split("=")[1].replace("`",""), call.from_user.id
+        call.message.text = call.data.split("=")[1].replace("`","")
         if len(call.message.text) == 17:
-            await gibdd_captcha(call.message)
+            try:
+                captcha = requests.get('https://check.gibdd.ru/captcha', timeout=1)
+                captcha = json.loads(captcha.text)
+                picture_request = urllib.request.urlopen(f'data:image/png;base64,{captcha["base64jpg"]}', timeout=1)
+                with open(fr'data\data_photo/captcha{call.message.chat.id}.jpg', "wb") as picture_file:
+                    picture_file.write(picture_request.read())
+                sqlite3_query(f"UPDATE user SET captcha = '{captcha['token']}&{call.message.text}' WHERE id = '{call.message.chat.id}'")
+                await bot.send_photo(call.message.chat.id, types.InputFile(fr'data\data_photo/captcha{call.message.chat.id}.jpg'),caption=f"*Введите текст с картинки*", parse_mode='Markdown')
+            except Exception:
+                await call.message.answer(emoji.emojize(f":prohibited: *Не удалось получить капчу :(*\n*Скорее всего ошибки на сайте ГИБДД.*"),parse_mode="Markdown")
         else:
             await call.message.answer("*Ошибка!*\nК сожалению бот может проверить такой vin номер :(", parse_mode="Markdown")
         await bot.answer_callback_query(call.id)
@@ -315,12 +318,35 @@ async def get_infomation_from_gibdd(message: types.Message):
     captcha = sqlite3_query(f"SELECT captcha FROM user WHERE id = {message.chat.id}")
 
     await message.answer_chat_action("typing")
-    async for text in Gibdd_Parsing.gibdd(message.chat.id, message.text, captcha[0][0]):
+    async for text in await Gibdd_Parsing.gibdd(message.chat.id, message.text, captcha[0][0]):
         if text[1] == False:
             await message.answer(emoji.emojize(text[0]), parse_mode="Markdown", disable_web_page_preview=True, disable_notification=True, reply_markup=markup)
         else:
             await bot.send_photo(message.chat.id, types.InputFile(fr'data\data_photo/{text[1]}'),caption=emoji.emojize(text[0]), parse_mode='Markdown', reply_markup=markup, disable_notification=True)
     await bot.delete_message(message.chat.id, msg.message_id)
+
+@dp.callback_query_handler(lambda c: c.data.startswith('bidfax='))
+async def bidfax_parsing(call: types.CallbackQuery):
+    await call.message.answer("Окей, через меньше чем минуту я вернусь с результатом!")
+    await bot.answer_callback_query(call.id)
+    user = sqlite3_query(f"SELECT id, name, subscribe_date FROM user WHERE id = '{call.message.chat.id}'")
+    follow_time = user[0][2].split("-")
+    if not (datetime(int(follow_time[0]), int(follow_time[1]),int(follow_time[2])) - datetime.now()).total_seconds() < 0:
+        async for car in Bidfax_Parser.bidfax_parsing(user[0][0], call.data.split("=")[1].replace("`","")):
+            if car[1] == False:
+                await call.message.answer(emoji.emojize(car[0]), parse_mode="Markdown")
+            else:
+                media = types.MediaGroup()
+                for i in range(car[1]):
+                    if car[1] == i+1:
+                        media.attach_photo(types.InputFile(fr'data\data_photo/bidfax{user[0][0]}img{i + 1}.jpg'), caption=emoji.emojize(car[0]), parse_mode='Markdown')
+                    else:
+                        media.attach_photo(types.InputFile(fr'data\data_photo/bidfax{user[0][0]}img{i+1}.jpg'))
+                await call.message.answer_media_group(media=media)
+
+    else:
+        log_print(user[0][0], user[0][1], yellow_mark, f"No subscribe")
+        await buy_subscribe(call.message.chat.id)
 
 def log_print(user_id, user_name, mark="blue_mark", text="None"):
     print(emoji.emojize(f"[{mark}]LOG|[{datetime.now().time().replace(microsecond=0)}]|ID:{user_id}|{user_name}|{text}|"))

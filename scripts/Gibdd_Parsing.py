@@ -10,11 +10,13 @@ import urllib.request
 async def gibdd(user_id, captcha_nums, captcha):
     data_diagnostic_card = []
     mileage_diagnostic_card = []
+    ad_counter = 1
     report_of_car = ":sport_utility_vehicle: *Отчет об Автомобиле* \n\n"
+    timeout = aiohttp.ClientTimeout(total=15)
 
     try:
         info_car = captcha.split("&")
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post('https://xn--b1afk4ade.xn--90adear.xn--p1ai/proxy/check/auto/history', ssl=False, data={'vin': info_car[1], 'checkType': 'history', 'captchaWord': captcha_nums,'captchaToken': info_car[0]}) as history:
                 history = ast.literal_eval(await history.text())
         try:
@@ -25,9 +27,9 @@ async def gibdd(user_id, captcha_nums, captcha):
             elif str(history['message']) == "Срок действия кода CAPTCHA устарел, попробуйте снова.":
                 yield f":prohibited: Срок действия кода CAPTCHA устарел!\n*Отправте VIN заново!*", False
             else:
-                print(history['givemeerror'])
+                raise Exception
         except Exception:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.post('https://xn--b1afk4ade.xn--90adear.xn--p1ai/proxy/check/auto/dtp', ssl=False, data={'vin': info_car[1], 'checkType': 'aiusdtp', 'captchaWord': captcha_nums, 'captchaToken': info_car[0]}) as dtp:
                     dtp = ast.literal_eval(await dtp.text())
                 async with session.post('https://xn--b1afk4ade.xn--90adear.xn--p1ai/proxy/check/auto/wanted', ssl=False, data={'vin': info_car[1], 'checkType': 'wanted', 'captchaWord': captcha_nums, 'captchaToken': info_car[0]}) as wanted:
@@ -168,12 +170,13 @@ async def gibdd(user_id, captcha_nums, captcha):
                                   (lambda: dtp['RequestResult']["Accidents"][i]["AccidentPlace"])]
                     for y in range(len(dtp_keys)):
                         try:
-                            dtp_info += f"*{dtp_keys[y]}*`{dtp_values[y]()}`\n"
+                            dtp_info += f"*{dtp_keys[y]}*`{dtp_values[y]()}`\n*{ad_counter}/{len(dtp['RequestResult']['Accidents'])}*"
+                            ad_counter += 1
                         except KeyError:
                             pass
                     yield dtp_info, f"dtpscr{user_id}.jpg"
     except Exception as e:
-        yield f"*Ошибка!* Повторите попытку!", False
+        yield f"*Ошибка!* Скорее всего произошли ошибки на сайте ГИБДД. Повторите попытку!", False
 
 
 def create_graph(data, mileage, id_user):
