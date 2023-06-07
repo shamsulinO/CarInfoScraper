@@ -1,9 +1,9 @@
 Russian version
 
-Телеграм бот для парсинга сайта avito.ru и парсинга информации об авто по его VIN номеру.
+Телеграм бот для парсинга сайта avito.ru, bidfax и парсинга информации об авто по его VIN номеру.
 
 Парсер может собирать подробную информацию об объявления с сайта avito.ru и отправлять её сообщением в телеграм.
-Так же если ему в телеграм отправить VIN номер авто то он сможет достать из различных открытых источниках подробную информацию об автомобиле.
+Так же если ему в телеграм отправить VIN номер авто то он сможет достать из различных открытых источниках подробную информацию об автомобиле и информацию с сайта Bidfax.
 Если боту отправить ссылку на объявление авто, то он может предоставить VIN номер этого авто и государственный номер авто.
 
 Парсинг объявлений:
@@ -27,10 +27,10 @@ ________________________________________________________________________________
 
 English version
 
-Telegram bot for parsing the avito.ru website and parsing information about a car by its VIN number.
+Telegram bot for parsing the avito.ru, bidfax websites and parsing information about a car by its VIN number.
 
-The parser can collect detailed information about ads on the avito.ru website and send it as a message in Telegram. 
-Additionally, if you send the bot a car's VIN number in Telegram, it can retrieve detailed information about the car from various open sources. 
+The parser can collect detailed information about ads on the avito.ru website and send it as a message in Telegram.
+Also, if you send him the VIN number of a car via Telegram, he will be able to retrieve detailed information about the vehicle from various open sources and information from the Bidfax website.
 If you send the bot a link to a car ad, it can provide you with the VIN number and license plate number of that car.
 
 Ad parsing:

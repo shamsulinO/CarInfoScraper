@@ -170,11 +170,11 @@ async def gibdd(user_id, captcha_nums, captcha):
                                   (lambda: dtp['RequestResult']["Accidents"][i]["AccidentPlace"])]
                     for y in range(len(dtp_keys)):
                         try:
-                            dtp_info += f"*{dtp_keys[y]}*`{dtp_values[y]()}`\n*{ad_counter}/{len(dtp['RequestResult']['Accidents'])}*"
-                            ad_counter += 1
+                            dtp_info += f"*{dtp_keys[y]}*`{dtp_values[y]()}`"
                         except KeyError:
                             pass
-                    yield dtp_info, f"dtpscr{user_id}.jpg"
+                    yield dtp_info + f"\n*{ad_counter}/{len(dtp['RequestResult']['Accidents'])}*", f"dtpscr{user_id}.jpg"
+                    ad_counter += 1
     except Exception as e:
         yield f"*Ошибка!* Скорее всего произошли ошибки на сайте ГИБДД. Повторите попытку!", False
 

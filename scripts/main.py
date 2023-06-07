@@ -295,7 +295,7 @@ async def gibdd_captcha(call: types.CallbackQuery):
         call.message.text = call.data.split("=")[1].replace("`","")
         if len(call.message.text) == 17:
             try:
-                captcha = requests.get('https://check.gibdd.ru/captcha', timeout=1)
+                captcha = requests.get('https://check.gibdd.ru/captcha', timeout=2.5)
                 captcha = json.loads(captcha.text)
                 picture_request = urllib.request.urlopen(f'data:image/png;base64,{captcha["base64jpg"]}', timeout=1)
                 with open(fr'data\data_photo/captcha{call.message.chat.id}.jpg', "wb") as picture_file:
@@ -318,7 +318,7 @@ async def get_infomation_from_gibdd(message: types.Message):
     captcha = sqlite3_query(f"SELECT captcha FROM user WHERE id = {message.chat.id}")
 
     await message.answer_chat_action("typing")
-    async for text in await Gibdd_Parsing.gibdd(message.chat.id, message.text, captcha[0][0]):
+    async for text in Gibdd_Parsing.gibdd(message.chat.id, message.text, captcha[0][0]):
         if text[1] == False:
             await message.answer(emoji.emojize(text[0]), parse_mode="Markdown", disable_web_page_preview=True, disable_notification=True, reply_markup=markup)
         else:
